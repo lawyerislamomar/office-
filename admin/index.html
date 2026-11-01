@@ -66,43 +66,70 @@ var money=function(n){return Number(n||0).toLocaleString('ar-EG')+' ج.م'};
 var M={
  requests:{t:'contact_requests',l:'طلبات التواصل',f:[['name','الاسم'],['phone','الهاتف'],['service','الخدمة'],['message','التفاصيل','textarea'],['status','الحالة','select',['جديد','تم التواصل','مغلق']]]},
  services:{t:'services',l:'الخدمات (تظهر في الموقع)',f:[['title','اسم الخدمة'],['description','الوصف','textarea'],['sort_order','الترتيب','number'],['published','منشورة','check']]},
+ articles:{t:'articles',l:'المقالات (تظهر في الموقع)',f:[['title','العنوان'],['summary','ملخص قصير','textarea'],['body','نص المقال (افصل الفقرات بسطر فاضي)','textarea',10],['published_on','تاريخ النشر','date'],['published','منشور','check']]},
  clients:{t:'clients',l:'العملاء',f:[['name','الاسم'],['phone','الهاتف'],['email','البريد'],['notes','ملاحظات','textarea']]},
- cases:{t:'cases',l:'القضايا والملفات',f:[['case_number','رقم القضية'],['title','عنوان القضية'],['type','النوع','select',['تأسيس شركة','نزاع شركات','عقارات','أخرى']],['client_id','العميل','ref','clients'],['court','المحكمة'],['status','الحالة','select',['جارية','مؤجلة','منتهية']],['fee_agreed','الأتعاب المتفق عليها','number'],['opened_on','تاريخ الفتح','date'],['notes','ملاحظات','textarea']]},
+ cases:{t:'cases',l:'القضايا والملفات',f:[['case_number','رقم القضية'],['title','عنوان القضية'],['type','النوع','select',['تأسيس شركة','نزاع شركات','عقارات','أخرى']],['client_id','العميل','ref','clients'],['court','المحكمة'],['status','الحالة','select',['جارية','مؤجلة','منتهية']],['assigned_to','المحامي المسؤول','ref','staff',['admin']],['fee_agreed','الأتعاب المتفق عليها','number',null,['admin','accountant']],['opened_on','تاريخ الفتح','date'],['notes','ملاحظات','textarea']]},
  sessions:{t:'court_sessions',l:'الجلسات',f:[['case_id','القضية','ref','cases'],['session_date','تاريخ الجلسة','date'],['notes','ملاحظات','textarea']]},
  payments:{t:'payments',l:'الأتعاب المدفوعة',f:[['client_id','العميل','ref','clients'],['case_id','القضية','ref','cases'],['amount','المبلغ','number'],['paid_on','تاريخ الدفع','date'],['note','ملاحظة']]},
- expenses:{t:'expenses',l:'النفقات',f:[['category','البند','select',['رسوم قضائية','انتقالات','إيجار المكتب','مرتبات','أدوات مكتبية','أخرى']],['case_id','القضية (اختياري)','ref','cases'],['amount','المبلغ','number'],['spent_on','التاريخ','date'],['note','ملاحظة']]},
+ expenses:{t:'expenses',l:'النفقات',f:[['category','البند','select',['رسوم قضائية','انتقالات','إيجار المكتب','مرتبات','أدوات مكتبية','أخرى']],['case_id','القضية (اختياري)','ref','cases'],['amount','المبلغ','number'],['spent_on','التاريخ','date'],['note','ملاحظة'],['created_by','سجّلها','ref','staff',['admin','accountant'],'ro']],nodel:['lawyer']},
  files:{t:'files',l:'ملفات القضايا',f:[['case_id','القضية','ref','cases'],['name','اسم الملف'],['path','الملف','file']]},
  poa:{t:'powers_of_attorney',l:'التوكيلات',f:[['client_id','الموكّل (العميل)','ref','clients'],['poa_number','رقم التوكيل'],['poa_type','النوع','select',['عام','خاص','قضايا','شركات','عقارات']],['notary','جهة التوثيق'],['case_id','القضية (اختياري)','ref','cases'],['issued_on','تاريخ الإصدار','date'],['expires_on','تاريخ الانتهاء','date'],['status','الحالة','select',['ساري','منتهي','ملغي']],['path','صورة التوكيل','file'],['note','ملاحظات','textarea']]},
  inventory:{t:'inventory_items',l:'المخزون',f:[['name','الصنف'],['category','التصنيف'],['quantity','الكمية','number'],['min_quantity','حد الطلب (تنبيه)','number'],['unit','الوحدة'],['location','مكان التخزين'],['note','ملاحظات','textarea']]},
- custody:{t:'custody',l:'العهد',f:[['holder','المستلم'],['kind','النوع','select',['نقدية','عينية']],['description','البيان','textarea'],['amount','قيمة العهدة','number'],['spent','المصروف منها','number'],['status','الحالة','select',['مع المستلم','تمت التسوية']],['received_on','تاريخ الاستلام','date'],['note','ملاحظة']]}
+ custody:{t:'custody',l:'العهد',f:[['holder','المستلم'],['holder_id','حساب الموظف (اختياري)','ref','staff',['admin','accountant']],['kind','النوع','select',['نقدية','عينية']],['description','البيان','textarea'],['amount','قيمة العهدة','number'],['spent','المصروف منها','number'],['status','الحالة','select',['مع المستلم','تمت التسوية']],['received_on','تاريخ الاستلام','date'],['note','ملاحظة']],ro:['lawyer']},
+ team:{t:'profiles',l:'الفريق والصلاحيات',f:[['full_name','الاسم'],['email','البريد','text',null,null,'ro'],['role','الدور','select',[['admin','مدير'],['lawyer','محامٍ'],['accountant','محاسب']]],['active','مفعّل','check']]}
 };
-var cache={clients:[],cases:[]},cur='home',rows=[],editing=null;
+var M0=JSON.parse(JSON.stringify(M)),role=null,uid=null,booting=false;
+var RL={admin:'مدير المكتب',lawyer:'محامٍ',accountant:'محاسب قانوني'};
+var ALLOW={lawyer:['clients','cases','sessions','poa','files','expenses','custody'],accountant:['payments','expenses','custody','inventory']};
+function can(k){ if(role==='admin')return true; if(k==='team')return false; return (ALLOW[role]||[]).indexOf(k)>=0; }
+var cache={clients:[],cases:[],staff:[]},cur='home',rows=[],editing=null;
 
-function nav(){ $('nav').innerHTML='<h2>إسلام زقزوق</h2><a data-k="home">الرئيسية</a>'+Object.keys(M).map(function(k){return '<a data-k="'+k+'">'+M[k].l.split(' (')[0]+'</a>'}).join('')+'<a class="out" id="out">تسجيل الخروج</a>';
+function nav(){ $('nav').innerHTML='<h2>إسلام عمر</h2><div style="padding:0 12px 12px;color:var(--mute);font-size:.8rem">'+RL[role]+'</div><a data-k="home">الرئيسية</a>'+Object.keys(M).filter(can).map(function(k){return '<a data-k="'+k+'">'+M[k].l.split(' (')[0]+'</a>'}).join('')+'<a class="out" id="out">تسجيل الخروج</a>';
   $('nav').onclick=function(e){var k=e.target.dataset&&e.target.dataset.k; if(k)go(k); if(e.target.id==='out')sb.auth.signOut();}; }
 async function loadCache(){ var c=await sb.from('clients').select('id,name'),s=await sb.from('cases').select('id,title');
-  cache.clients=(c.data||[]).map(function(x){return{id:x.id,n:x.name}}); cache.cases=(s.data||[]).map(function(x){return{id:x.id,n:x.title}}); }
+  cache.clients=(c.data||[]).map(function(x){return{id:x.id,n:x.name}}); cache.cases=(s.data||[]).map(function(x){return{id:x.id,n:x.title}});
+  var st=await sb.from('profiles').select('id,full_name'); cache.staff=(st.data||[]).map(function(x){return{id:x.id,n:x.full_name}}); }
 function refName(tbl,id){var r=cache[tbl].find(function(x){return x.id===id});return r?r.n:'—'}
 
 async function go(k){
-  cur=k; await loadCache();
+  if(k!=='home'&&!can(k))return; cur=k; await loadCache();
   document.querySelectorAll('#nav a').forEach(function(a){a.classList.toggle('on',a.dataset.k===k)});
   if(k==='home'){ $('title').textContent='نظرة عامة'; $('add').style.display='none'; return home(); }
-  var m=M[k]; $('title').textContent=m.l; $('add').style.display='';
+  var m=M[k], ro=(m.ro||[]).indexOf(role)>=0, nodel=(m.nodel||[]).indexOf(role)>=0; $('title').textContent=m.l; $('add').style.display=ro?'none':'';
   var r=await sb.from(m.t).select('*').order('created_at',{ascending:false}); rows=r.data||[];
   var head=m.f.map(function(f){return '<th>'+f[1]+'</th>'}).join('')+'<th></th>';
   var body=rows.map(function(row,i){return '<tr>'+m.f.map(function(f){return '<td>'+cell(row[f[0]],f)+'</td>'}).join('')+
-    '<td class="act"><button class="btn sm" data-e="'+i+'">تعديل</button> <button class="btn sm del" data-d="'+i+'">حذف</button></td></tr>'}).join('');
+    '<td class="act">'+(ro?'':'<button class="btn sm" data-e="'+i+'">تعديل</button>')+(ro||nodel?'':' <button class="btn sm del" data-d="'+i+'">حذف</button>')+'</td></tr>'}).join('');
   $('view').innerHTML='<div class="glass tw"><table><tr>'+head+'</tr>'+(body||'<tr><td colspan="9" style="color:var(--mute)">لا توجد بيانات بعد. اضغط "إضافة" للبدء.</td></tr>')+'</table></div>';
 }
 function cell(v,f){
+  if(f[2]==='select'&&Array.isArray(f[3][0])){var q=f[3].find(function(o){return o[0]===v});return esc(q?q[1]:v)}
   if(f[2]==='ref') return esc(refName(f[3],v));
   if(f[2]==='check') return v?'✓':'—';
   if(f[2]==='file') return v?'<button class="btn sm" data-f="'+esc(v)+'">فتح</button>':'—';
   if(f[2]==='number'&&(f[0].indexOf('fee')>=0||f[0]==='amount'||f[0]==='spent')) return money(v);
   return esc(v);
 }
+async function homeL(){
+  var d=new Date().toISOString().slice(0,10);
+  var a=await sb.from('cases').select('id',{count:'exact',head:true}).neq('status','منتهية');
+  var ex=await sb.from('expenses').select('amount'),cu=await sb.from('custody').select('amount,spent,status');
+  var exT=(ex.data||[]).reduce(function(t,x){return t+Number(x.amount||0)},0),cuT=(cu.data||[]).filter(function(x){return x.status==='مع المستلم'}).reduce(function(t,x){return t+Number(x.amount||0)-Number(x.spent||0)},0);
+  var b=await sb.from('court_sessions').select('session_date,notes,case_id').gte('session_date',d).order('session_date').limit(8);
+  var ses=(b.data||[]).map(function(s){return '<tr><td>'+esc(s.session_date)+'</td><td>'+esc(refName('cases',s.case_id))+'</td><td>'+esc(s.notes)+'</td></tr>'}).join('');
+  $('view').innerHTML='<div class="cards"><div class="card glass"><b>'+(a.count||0)+'</b><span>قضاياي المفتوحة</span></div><div class="card glass"><b>'+money(exT)+'</b><span>مصروفاتي</span></div><div class="card glass"><b>'+money(cuT)+'</b><span>عهدتي (المتبقي)</span></div></div><h2 style="margin-bottom:12px">جلساتي القادمة</h2><div class="glass tw"><table>'+(ses||'<tr><td style="color:var(--mute)">لا توجد جلسات قادمة.</td></tr>')+'</table></div>';
+}
+async function homeA(){
+  var q=await Promise.all([sb.from('payments').select('amount'),sb.from('expenses').select('amount'),sb.from('custody').select('amount,spent,status'),sb.from('inventory_items').select('quantity,min_quantity')]);
+  var sum=function(r){return (r.data||[]).reduce(function(a,x){return a+Number(x.amount||0)},0)};
+  var inc=sum(q[0]),exp=sum(q[1]);
+  var cus=(q[2].data||[]).filter(function(x){return x.status==='مع المستلم'}).reduce(function(a,x){return a+Number(x.amount||0)-Number(x.spent||0)},0);
+  var low=(q[3].data||[]).filter(function(x){return Number(x.quantity)<=Number(x.min_quantity)}).length;
+  var C=function(b,s){return '<div class="card glass"><b>'+b+'</b><span>'+s+'</span></div>'};
+  $('view').innerHTML='<div class="cards">'+C(money(inc),'إجمالي المدفوع')+C(money(exp),'إجمالي النفقات')+C(money(inc-exp),'الصافي')+C(money(cus),'عهد مفتوحة (المتبقي)')+C(low,'أصناف تحت حد الطلب')+'</div>';
+}
 async function home(){
+  if(role==='lawyer')return homeL(); if(role==='accountant')return homeA();
   var d=new Date().toISOString().slice(0,10),soon=new Date(Date.now()+30*864e5).toISOString().slice(0,10);
   var q=await Promise.all([sb.from('payments').select('amount'),sb.from('expenses').select('amount'),
    sb.from('contact_requests').select('id',{count:'exact',head:true}).eq('status','جديد'),
@@ -121,15 +148,15 @@ async function home(){
 
 function input(f,v){
   var k=f[0],t=f[2]||'text',val=v==null?'':v,lab='<label>'+f[1];
-  if(t==='textarea') return lab+'<textarea name="'+k+'" rows="3">'+esc(val)+'</textarea></label>';
+  if(t==='textarea') return lab+'<textarea name="'+k+'" rows="'+(f[3]||3)+'">'+esc(val)+'</textarea></label>';
   if(t==='check') return '<label class="ck"><input type="checkbox" name="'+k+'" '+((v==null||v)?'checked':'')+'> '+f[1]+'</label>';
-  if(t==='select') return lab+'<select name="'+k+'">'+f[3].map(function(o){return '<option '+(o===val?'selected':'')+'>'+o+'</option>'}).join('')+'</select></label>';
+  if(t==='select') return lab+'<select name="'+k+'">'+f[3].map(function(o){var ov=Array.isArray(o)?o[0]:o,ol=Array.isArray(o)?o[1]:o;return '<option value="'+esc(ov)+'" '+(ov===val?'selected':'')+'>'+esc(ol)+'</option>'}).join('')+'</select></label>';
   if(t==='ref') return lab+'<select name="'+k+'"><option value="">—</option>'+cache[f[3]].map(function(o){return '<option value="'+o.id+'" '+(o.id===val?'selected':'')+'>'+esc(o.n)+'</option>'}).join('')+'</select></label>';
   if(t==='file') return lab+'<input type="file" name="'+k+'"></label>';
   return lab+'<input type="'+t+'" name="'+k+'" value="'+esc(val)+'" '+(t==='number'?'step="any"':'')+'></label>';
 }
 function openForm(row){ editing=row; var m=M[cur]; $('dt').textContent=(row?'تعديل: ':'إضافة: ')+m.l.split(' (')[0]; $('dmsg').textContent='';
-  $('fields').innerHTML=m.f.map(function(f){return input(f,row&&row[f[0]])}).join(''); $('dlg').showModal(); }
+  $('fields').innerHTML=(cur==='team'&&!row?'<label>البريد (نفس بريد حساب Supabase)<input name="email" type="email" required dir="ltr"></label>':'')+m.f.filter(function(f){return f[5]!=='ro'}).map(function(f){return input(f,row&&row[f[0]])}).join(''); $('dlg').showModal(); }
 
 $('add').onclick=function(){openForm(null)};
 $('cancel').onclick=function(){$('dlg').close()};
@@ -142,11 +169,14 @@ $('view').onclick=async function(e){
 $('df').onsubmit=async function(e){
   e.preventDefault(); var m=M[cur],fd=new FormData($('df')),o={};
   $('save').disabled=true;
-  for(var i=0;i<m.f.length;i++){ var f=m.f[i],k=f[0],t=f[2];
+  for(var i=0;i<m.f.length;i++){ var f=m.f[i],k=f[0],t=f[2]; if(f[5]==='ro')continue;
     if(t==='check') o[k]=$('df').elements[k].checked;
     else if(t==='file'){ var file=fd.get(k); if(file&&file.size){ var ext=(file.name.split('.').pop()||'bin').replace(/[^a-z0-9]/gi,''); var p=crypto.randomUUID()+'.'+ext;
         var up=await sb.storage.from('files').upload(p,file); if(up.error){$('dmsg').textContent='تعذر رفع الملف: '+up.error.message;$('save').disabled=false;return;} o[k]=p; } }
     else { var v=fd.get(k); o[k]=(v===''||v==null)?null:(t==='number'?Number(v):v); } }
+  if(cur==='team'&&!editing){ var rr=await sb.rpc('add_staff',{p_email:fd.get('email'),p_name:o.full_name,p_role:o.role}); $('save').disabled=false;
+    if(rr.error){$('dmsg').textContent='تعذر الإضافة: '+rr.error.message;return;} $('dlg').close(); go(cur); return; }
+  if(role==='lawyer'&&cur==='cases'&&!editing)o.assigned_to=uid;
   var r=editing?await sb.from(m.t).update(o).eq('id',editing.id):await sb.from(m.t).insert(o);
   $('save').disabled=false;
   if(r.error){$('dmsg').textContent='تعذر الحفظ: '+r.error.message;return;}
@@ -155,10 +185,19 @@ $('df').onsubmit=async function(e){
 
 $('login').onsubmit=async function(e){ e.preventDefault();
   var r=await sb.auth.signInWithPassword({email:$('em').value,password:$('pw').value});
-  $('lmsg').textContent=r.error?'بيانات الدخول غير صحيحة.':''; };
-function gate(s){ $('login').style.display=s?'none':'grid'; $('app').style.display=s?'grid':'none'; if(s){nav();go('home');} }
+  var m=''; if(r.error){ var e=r.error.message||''; m=/YOUR/.test(CONFIG.SUPABASE_URL)?'ملف config.js لسه مش متعدّل (فيه YOUR-PROJECT).':/Invalid login/i.test(e)?'الإيميل أو الباسورد غير صحيح، أو المستخدم مش موجود في Supabase.':/not confirmed/i.test(e)?'الإيميل غير مؤكد في Supabase (فعّل Auto Confirm أو اضغط Confirm user).':/Invalid API key|apikey/i.test(e)?'مفتاح anon في config.js غير صحيح.':'تعذر الاتصال: '+e; }
+  $('lmsg').textContent=m; };
+async function gate(s){
+  if(!s){ role=null; $('login').style.display='grid'; $('app').style.display='none'; return; }
+  booting=true;
+  var u=(await sb.auth.getUser()).data.user, pr=u?(await sb.from('profiles').select('*').eq('id',u.id).maybeSingle()).data:null;
+  if(!pr||!pr.active){ $('lmsg').textContent='حسابك غير مفعّل أو غير مضاف للفريق. تواصل مع مدير المكتب.'; booting=false; await sb.auth.signOut(); return; }
+  role=pr.role; uid=u.id;
+  Object.keys(M0).forEach(function(k){ M[k].f=JSON.parse(JSON.stringify(M0[k].f)).filter(function(f){return !f[4]||f[4].indexOf(role)>=0}); });
+  $('login').style.display='none'; $('app').style.display='grid'; booting=false; nav(); go('home');
+}
 sb.auth.getSession().then(function(r){gate(!!r.data.session)});
-sb.auth.onAuthStateChange(function(ev,s){ if(ev==='SIGNED_IN'&&$('app').style.display!=='grid')gate(true); if(ev==='SIGNED_OUT')gate(false); });
+sb.auth.onAuthStateChange(function(ev,s){ if(ev==='SIGNED_IN'&&!role&&!booting)gate(true); if(ev==='SIGNED_OUT')gate(false); });
 </script>
 </body>
 </html>
