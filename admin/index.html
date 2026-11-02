@@ -36,6 +36,18 @@ dialog::backdrop{background:rgba(0,0,0,.65);backdrop-filter:blur(4px)}
 dialog label{display:grid;gap:5px;margin-bottom:14px;color:var(--mute);font-size:.9rem}
 dialog label.ck{display:flex;align-items:center;gap:8px}dialog label.ck input{width:auto}
 .msg{color:#e9a0a0;min-height:1.2em}
+#chatw{display:grid;grid-template-columns:290px 1fr;height:72vh}
+.cl{overflow:auto;border-inline-end:1px solid var(--line)}
+.ci{padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer}.ci:hover,.ci.on{background:rgba(195,160,95,.09)}
+.ci b{display:flex;justify-content:space-between;gap:8px;font-weight:500}.ci small{display:block;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ub{background:var(--brass);color:var(--ink);border-radius:20px;padding:0 8px;font-size:.78rem}
+.ct{display:flex;flex-direction:column;min-width:0}.chh{padding:12px 18px;border-bottom:1px solid var(--line);color:var(--soft)}
+.chm{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+.bb{max-width:75%;padding:8px 14px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.bb.s{align-self:flex-start;background:rgba(195,160,95,.2);border:1px solid var(--line)}.bb.c{align-self:flex-end;background:rgba(255,255,255,.07)}
+.bb small{display:block;color:var(--mute);font-size:.72rem}
+#cf{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}#cf input{flex:1}
+@media(max-width:800px){#chatw{grid-template-columns:1fr;height:auto}.cl{max-height:200px}.chm{height:50vh}}
 @media(max-width:800px){#app{grid-template-columns:1fr}aside{flex-direction:row;overflow-x:auto;border:0;border-bottom:1px solid var(--line)}aside h2,aside .out{display:none}aside a{white-space:nowrap}main{padding:16px}}
 </style>
 </head>
@@ -76,6 +88,7 @@ var M={
  poa:{t:'powers_of_attorney',l:'التوكيلات',f:[['client_id','الموكّل (العميل)','ref','clients'],['poa_number','رقم التوكيل'],['poa_type','النوع','select',['عام','خاص','قضايا','شركات','عقارات']],['notary','جهة التوثيق'],['case_id','القضية (اختياري)','ref','cases'],['issued_on','تاريخ الإصدار','date'],['expires_on','تاريخ الانتهاء','date'],['status','الحالة','select',['ساري','منتهي','ملغي']],['path','صورة التوكيل','file'],['note','ملاحظات','textarea']]},
  inventory:{t:'inventory_items',l:'المخزون',f:[['name','الصنف'],['category','التصنيف'],['quantity','الكمية','number'],['min_quantity','حد الطلب (تنبيه)','number'],['unit','الوحدة'],['location','مكان التخزين'],['note','ملاحظات','textarea']]},
  custody:{t:'custody',l:'العهد',f:[['holder','المستلم'],['holder_id','حساب الموظف (اختياري)','ref','staff',['admin','accountant']],['kind','النوع','select',['نقدية','عينية']],['description','البيان','textarea'],['amount','قيمة العهدة','number'],['spent','المصروف منها','number'],['status','الحالة','select',['مع المستلم','تمت التسوية']],['received_on','تاريخ الاستلام','date'],['note','ملاحظة']],ro:['lawyer']},
+ chat:{t:'conversations',l:'المحادثات (الدردشة)',f:[]},
  team:{t:'profiles',l:'الفريق والصلاحيات',f:[['full_name','الاسم'],['email','البريد','text',null,null,'ro'],['role','الدور','select',[['admin','مدير'],['lawyer','محامٍ'],['accountant','محاسب']]],['active','مفعّل','check']]}
 };
 var M0=JSON.parse(JSON.stringify(M)),role=null,uid=null,booting=false;
@@ -84,7 +97,7 @@ var ALLOW={lawyer:['clients','cases','sessions','poa','files','expenses','custod
 function can(k){ if(role==='admin')return true; if(k==='team')return false; return (ALLOW[role]||[]).indexOf(k)>=0; }
 var cache={clients:[],cases:[],staff:[]},cur='home',rows=[],editing=null;
 
-function nav(){ $('nav').innerHTML='<h2>إسلام عمر</h2><div style="padding:0 12px 12px;color:var(--mute);font-size:.8rem">'+RL[role]+'</div><a data-k="home">الرئيسية</a>'+Object.keys(M).filter(can).map(function(k){return '<a data-k="'+k+'">'+M[k].l.split(' (')[0]+'</a>'}).join('')+'<a class="out" id="out">تسجيل الخروج</a>';
+function nav(){ $('nav').innerHTML='<h2>إسلام زقزوق</h2><div style="padding:0 12px 12px;color:var(--mute);font-size:.8rem">'+RL[role]+'</div><a data-k="home">الرئيسية</a>'+Object.keys(M).filter(can).map(function(k){return '<a data-k="'+k+'">'+M[k].l.split(' (')[0]+'</a>'}).join('')+'<a class="out" id="out">تسجيل الخروج</a>';
   $('nav').onclick=function(e){var k=e.target.dataset&&e.target.dataset.k; if(k)go(k); if(e.target.id==='out')sb.auth.signOut();}; }
 async function loadCache(){ var c=await sb.from('clients').select('id,name'),s=await sb.from('cases').select('id,title');
   cache.clients=(c.data||[]).map(function(x){return{id:x.id,n:x.name}}); cache.cases=(s.data||[]).map(function(x){return{id:x.id,n:x.title}});
@@ -95,6 +108,7 @@ async function go(k){
   if(k!=='home'&&!can(k))return; cur=k; await loadCache();
   document.querySelectorAll('#nav a').forEach(function(a){a.classList.toggle('on',a.dataset.k===k)});
   if(k==='home'){ $('title').textContent='نظرة عامة'; $('add').style.display='none'; return home(); }
+  if(k==='chat'){ $('title').textContent=M.chat.l; return chatView(); }
   var m=M[k], ro=(m.ro||[]).indexOf(role)>=0, nodel=(m.nodel||[]).indexOf(role)>=0; $('title').textContent=m.l; $('add').style.display=ro?'none':'';
   var r=await sb.from(m.t).select('*').order('created_at',{ascending:false}); rows=r.data||[];
   var head=m.f.map(function(f){return '<th>'+f[1]+'</th>'}).join('')+'<th></th>';
@@ -128,7 +142,44 @@ async function homeA(){
   var C=function(b,s){return '<div class="card glass"><b>'+b+'</b><span>'+s+'</span></div>'};
   $('view').innerHTML='<div class="cards">'+C(money(inc),'إجمالي المدفوع')+C(money(exp),'إجمالي النفقات')+C(money(inc-exp),'الصافي')+C(money(cus),'عهد مفتوحة (المتبقي)')+C(low,'أصناف تحت حد الطلب')+'</div>';
 }
-async function home(){
+var chatSel=null,chatCh=null;
+function tm(t){return new Date(t).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}
+function bub(m){return '<div class="bb '+(m.sender==='staff'?'s':'c')+'" data-id="'+m.id+'">'+esc(m.body)+'<small>'+tm(m.created_at)+'</small></div>'}
+async function chatList(){
+  var r=await sb.from('conversations').select('*').order('last_message_at',{ascending:false}), a=r.data||[];
+  if(!$('cl'))return;
+  $('cl').innerHTML=a.length?a.map(function(c){return '<div class="ci'+(c.id===chatSel?' on':'')+'" data-c="'+c.id+'" data-n="'+esc(c.client_name||c.client_email)+'"><b><span>'+esc(c.client_name||c.client_email||'عميل')+'</span>'+(c.unread_staff>0?'<span class="ub">'+c.unread_staff+'</span>':'')+'</b><small>'+esc(c.last_message||'')+'</small></div>'}).join(''):'<div style="padding:20px;color:var(--mute)">لا توجد محادثات بعد. تظهر هنا أول ما يراسلك عميل من الموقع.</div>';
+}
+async function openConv(id,name){
+  chatSel=id; $('cf').style.display='flex'; $('chh').textContent=name||'';
+  var r=await sb.from('messages').select('*').eq('conversation_id',id).order('created_at');
+  $('chm').innerHTML=(r.data||[]).map(bub).join(''); $('chm').scrollTop=$('chm').scrollHeight;
+  await sb.from('conversations').update({unread_staff:0}).eq('id',id); chatList();
+}
+function onNewMsg(m){
+  if(cur!=='chat'){return}
+  if(m.conversation_id===chatSel){ if(!document.querySelector('#chm [data-id="'+m.id+'"]')){ $('chm').insertAdjacentHTML('beforeend',bub(m)); $('chm').scrollTop=$('chm').scrollHeight; }
+    if(m.sender==='client') sb.from('conversations').update({unread_staff:0}).eq('id',m.conversation_id).then(chatList); else chatList(); }
+  else chatList();
+}
+async function chatView(){
+  $('add').style.display='none'; chatSel=null;
+  $('view').innerHTML='<div id="chatw" class="glass"><div class="cl" id="cl"></div><div class="ct"><div class="chh" id="chh">اختر محادثة من القائمة</div><div class="chm" id="chm"></div><form id="cf" style="display:none"><input id="ci" placeholder="اكتب ردك..." autocomplete="off" maxlength="2000"><button class="btn">إرسال</button></form></div></div>';
+  await chatList();
+  $('cl').onclick=function(e){var c=e.target.closest('.ci'); if(c)openConv(c.dataset.c,c.dataset.n)};
+  $('cf').onsubmit=async function(e){ e.preventDefault(); var b=$('ci').value.trim(); if(!b||!chatSel)return; $('ci').value='';
+    var r=await sb.from('messages').insert({conversation_id:chatSel,sender:'staff',body:b}).select('*').single();
+    if(r.error){alert('تعذر الإرسال: '+r.error.message);return}
+    if(!document.querySelector('#chm [data-id="'+r.data.id+'"]')){$('chm').insertAdjacentHTML('beforeend',bub(r.data));$('chm').scrollTop=$('chm').scrollHeight}
+    chatList(); };
+  if(!chatCh){ chatCh=sb.channel('staff-chat').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},function(p){onNewMsg(p.new)}).subscribe(); }
+}
+async function chatCard(){
+  var r=await sb.from('conversations').select('unread_staff'); var n=(r.data||[]).reduce(function(a,x){return a+(x.unread_staff||0)},0);
+  var c=document.querySelector('#view .cards'); if(c) c.insertAdjacentHTML('afterbegin','<div class="card glass" style="cursor:pointer" onclick="go(\'chat\')"><b>'+n+'</b><span>رسائل جديدة في الدردشة</span></div>');
+}
+async function home(){ await home0(); if(role==='admin')chatCard(); }
+async function home0(){
   if(role==='lawyer')return homeL(); if(role==='accountant')return homeA();
   var d=new Date().toISOString().slice(0,10),soon=new Date(Date.now()+30*864e5).toISOString().slice(0,10);
   var q=await Promise.all([sb.from('payments').select('amount'),sb.from('expenses').select('amount'),
